@@ -1,7 +1,7 @@
-import { getExpenses } from "@/app/actions/expenses";
-import { getMonthlyTotal } from "@/app/actions/statistics";
+import { getFinancialSummary } from "@/app/actions/statistics";
+import { getTransactions } from "@/app/actions/transactions";
 import { format } from "date-fns";
-import { ArrowDownRight, ArrowUpRight, Calendar, Plus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Plus, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -12,46 +12,58 @@ async function StatsCard() {
    const currentMonth = date.getMonth() + 1;
    const currentYear = date.getFullYear();
 
-   const lastMonthDate = new Date(date.getFullYear(), date.getMonth() - 1, 1);
-   const lastMonth = lastMonthDate.getMonth() + 1;
-   const lastYear = lastMonthDate.getFullYear();
-
-   const { data: currentTotal } = await getMonthlyTotal(currentYear, currentMonth);
-   const { data: lastTotal } = await getMonthlyTotal(lastYear, lastMonth);
-
-   const current = currentTotal || 0;
-   const last = lastTotal || 0;
-
-   const diff = current - last;
-   const percentage = last === 0 ? 100 : ((diff / last) * 100).toFixed(1);
-   const isUp = diff > 0;
+   const { data } = await getFinancialSummary(currentYear, currentMonth);
+   const income = data?.income || 0;
+   const expense = data?.expense || 0;
+   const balance = data?.balance || 0;
 
    return (
-      <div className="bg-card text-card-foreground rounded-xl border shadow-sm p-6 mb-6">
-         <div className="flex justify-between items-start">
-            <div>
-               <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-               <h2 className="text-3xl font-bold mt-2">${current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
-            </div>
-            <div className={`flex items-center text-xs font-medium px-2 py-1 rounded-full ${isUp ? "bg-destructive/10 text-destructive" : "bg-green-500/10 text-green-500"}`}>
-               {isUp ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
-               {Math.abs(Number(percentage))}%
+      <div className="grid gap-4 mb-6">
+         <div className="bg-card text-card-foreground rounded-xl border shadow-sm p-6">
+            <div className="flex justify-between items-start">
+               <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Balance</p>
+                  <h2 className="text-3xl font-bold mt-2">₹{balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</h2>
+               </div>
+               <div className="p-2 bg-primary/10 rounded-full">
+                  <Wallet className="w-6 h-6 text-primary" />
+               </div>
             </div>
          </div>
-         <p className="text-xs text-muted-foreground mt-4">vs last month (${last.toLocaleString()})</p>
+
+         <div className="grid grid-cols-2 gap-4">
+            <div className="bg-card text-card-foreground rounded-xl border shadow-sm p-4">
+               <div className="flex items-center space-x-2 mb-2">
+                  <div className="p-1.5 bg-green-500/10 rounded-full">
+                     <ArrowDownRight className="w-4 h-4 text-green-500" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">Income</p>
+               </div>
+               <p className="text-xl font-bold text-green-600">₹{income.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div className="bg-card text-card-foreground rounded-xl border shadow-sm p-4">
+               <div className="flex items-center space-x-2 mb-2">
+                  <div className="p-1.5 bg-red-500/10 rounded-full">
+                     <ArrowUpRight className="w-4 h-4 text-red-500" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">Expense</p>
+               </div>
+               <p className="text-xl font-bold text-red-600">₹{expense.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
+            </div>
+         </div>
       </div>
    );
 }
 
-async function RecentExpenses() {
-   const { data: expenses } = await getExpenses({ limit: 5 });
+async function RecentTransactions() {
+   const { data: transactions } = await getTransactions({ limit: 5 });
 
-   if (!expenses || expenses.length === 0) {
+   if (!transactions || transactions.length === 0) {
       return (
          <div className="text-center py-10">
-            <p className="text-muted-foreground">No expenses yet.</p>
+            <p className="text-muted-foreground">No transactions yet.</p>
             <Link href="/add" className="text-primary font-medium mt-2 inline-block">
-               Add your first expense
+               Add your first transaction
             </Link>
          </div>
       );
@@ -61,26 +73,33 @@ async function RecentExpenses() {
       <div className="space-y-4">
          <div className="flex justify-between items-center">
             <h3 className="font-semibold text-lg">Recent Transactions</h3>
+            {/* <Link href="/transactions" className="text-sm text-primary hover:underline">
+               View All
+            </Link> */}
+            {/* Linking to /transactions page which was /expenses. User didn't ask to rename the expenses route, but logical. Keeping it safe, maybe link to nothing or expenses? 
+               Wait, I should update expenses page to be transactions page too.
+               For now, let's keep the link to /expenses and update that page next.
+            */}
             <Link href="/expenses" className="text-sm text-primary hover:underline">
                View All
             </Link>
          </div>
          <div className="space-y-3">
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {expenses.map((expense: any) => (
-               <div key={expense.id} className="flex items-center justify-between p-4 bg-card border rounded-lg shadow-sm">
+            {transactions.map((t: any) => (
+               <div key={t.id} className="flex items-center justify-between p-4 bg-card border rounded-lg shadow-sm">
                   <div className="flex items-center space-x-4">
-                     <div className="p-2 bg-primary/10 rounded-full">
-                        <Calendar className="w-4 h-4 text-primary" />
-                     </div>
+                     <div className={`p-2 rounded-full ${t.type === "INCOME" ? "bg-green-500/10" : "bg-red-500/10"}`}>{t.type === "INCOME" ? <ArrowDownRight className="w-4 h-4 text-green-500" /> : <ArrowUpRight className="w-4 h-4 text-red-500" />}</div>
                      <div>
-                        <p className="font-medium">{expense.category.name}</p>
-                        <p className="text-xs text-muted-foreground">{format(new Date(expense.date), "MMM d, yyyy")}</p>
+                        <p className="font-medium">{t.category.name}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(t.date), "MMM d, yyyy")}</p>
                      </div>
                   </div>
                   <div className="text-right">
-                     <p className="font-bold">-${Number(expense.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                     {expense.note && <p className="text-xs text-muted-foreground max-w-[100px] truncate">{expense.note}</p>}
+                     <p className={`font-bold ${t.type === "INCOME" ? "text-green-600" : "text-foreground"}`}>
+                        {t.type === "INCOME" ? "+" : "-"}₹{Number(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                     </p>
+                     {t.note && <p className="text-xs text-muted-foreground max-w-[100px] truncate">{t.note}</p>}
                   </div>
                </div>
             ))}
@@ -115,7 +134,7 @@ export default function Home() {
                </div>
             }
          >
-            <RecentExpenses />
+            <RecentTransactions />
          </Suspense>
       </div>
    );

@@ -1,11 +1,14 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { TransactionType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-export async function getCategories() {
+export async function getCategories(type?: TransactionType) {
    try {
+      const where = type ? { type } : {};
       const categories = await prisma.category.findMany({
+         where,
          orderBy: { name: "asc" },
       });
       return { success: true, data: categories };
@@ -15,14 +18,16 @@ export async function getCategories() {
    }
 }
 
-export async function addCategory(name: string) {
+export async function addCategory(name: string, type: TransactionType = "EXPENSE") {
    try {
-      // Check if category exists (case-insensitive)
+      // Check if category exists with same name AND type
       const existing = await prisma.category.findFirst({
          where: {
             name: {
                equals: name,
+               mode: "insensitive", // proper case insensitive check
             },
+            type,
          },
       });
 
@@ -31,7 +36,7 @@ export async function addCategory(name: string) {
       }
 
       const category = await prisma.category.create({
-         data: { name },
+         data: { name, type },
       });
       revalidatePath("/categories");
       return { success: true, data: category };
@@ -44,12 +49,12 @@ export async function addCategory(name: string) {
 export async function deleteCategory(id: number) {
    try {
       // Check if category is used
-      const usageCount = await prisma.expense.count({
+      const usageCount = await prisma.transaction.count({
          where: { categoryId: id },
       });
 
       if (usageCount > 0) {
-         return { success: false, error: "Cannot delete category with associated expenses" };
+         return { success: false, error: "Cannot delete category with associated transactions" };
       }
 
       await prisma.category.delete({ where: { id } });

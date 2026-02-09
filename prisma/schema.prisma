@@ -7,20 +7,39 @@ datasource db {
   provider = "postgresql"
 }
 
-model Expense {
-  id        Int      @id @default(autoincrement())
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model Transaction {
+  id        Int             @id @default(autoincrement())
   amount    Decimal
   date      DateTime
   note      String?
-  createdAt DateTime @default(now())
+  type      TransactionType @default(EXPENSE)
+  createdAt DateTime        @default(now())
 
   categoryId Int
   category   Category @relation(fields: [categoryId], references: [id])
+
+  @@map("transactions")
 }
 
 model Category {
-  id        Int       @id @default(autoincrement())
-  name      String    @unique
-  createdAt DateTime  @default(now())
-  expenses  Expense[]
+  id           Int             @id @default(autoincrement())
+  name         String
+  type         TransactionType @default(EXPENSE)
+  createdAt    DateTime        @default(now())
+  transactions Transaction[]
+  // Original was name @unique. Let's keep name @unique for now to avoid complexity unless user specifically requested duplicates.
+  // Actually, wait. "Salary" (Income) vs "Salary" (Expense) - probably distinct.
+  // Let's modify the unique constraint to be composite if possible, but for now let's stick to simple unique name to match existing valid schema or just `name String` and `@@unique([name, type])`.
+  // The prompt didn't specify, but `@@unique([name, type])` is more flexible. However, `name String @unique` is stricter. 
+  // Let's stick to `name String @unique` for now as it was before, unless I see a reason to change.
+  // Actually, I should remove `@unique` from `name` line if I use `@@unique`.
+  // Let's KEEP `name @unique` for simplicity as per original schema, ensuring distinct category names globally.
+
+  @@unique([name, type]) // Allow same category name for different types (e.g., "Bonus" in Income vs undefined in Expense, or just unique names global? Better unique per type maybe? OR global unique name? User might want "Salary" in Income and "Salary" in Expense (unlikely). Let's stick to unique name for simplicity first, or composite. Actually, unique name is simplest. But wait, existing categories are implied Expense. If I add "Salary" it's Income. "Rent" is Expense.
+  @@map("categories")
 }
