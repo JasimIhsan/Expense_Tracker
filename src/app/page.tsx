@@ -1,65 +1,121 @@
-import Image from "next/image";
+import { getExpenses } from "@/app/actions/expenses";
+import { getMonthlyTotal } from "@/app/actions/statistics";
+import { format } from "date-fns";
+import { ArrowDownRight, ArrowUpRight, Calendar, Plus } from "lucide-react";
+import Link from "next/link";
+import { Suspense } from "react";
+
+export const revalidate = 0;
+
+async function StatsCard() {
+   const date = new Date();
+   const currentMonth = date.getMonth() + 1;
+   const currentYear = date.getFullYear();
+
+   const lastMonthDate = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+   const lastMonth = lastMonthDate.getMonth() + 1;
+   const lastYear = lastMonthDate.getFullYear();
+
+   const { data: currentTotal } = await getMonthlyTotal(currentYear, currentMonth);
+   const { data: lastTotal } = await getMonthlyTotal(lastYear, lastMonth);
+
+   const current = currentTotal || 0;
+   const last = lastTotal || 0;
+
+   const diff = current - last;
+   const percentage = last === 0 ? 100 : ((diff / last) * 100).toFixed(1);
+   const isUp = diff > 0;
+
+   return (
+      <div className="bg-card text-card-foreground rounded-xl border shadow-sm p-6 mb-6">
+         <div className="flex justify-between items-start">
+            <div>
+               <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
+               <h2 className="text-3xl font-bold mt-2">${current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+            </div>
+            <div className={`flex items-center text-xs font-medium px-2 py-1 rounded-full ${isUp ? "bg-destructive/10 text-destructive" : "bg-green-500/10 text-green-500"}`}>
+               {isUp ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
+               {Math.abs(Number(percentage))}%
+            </div>
+         </div>
+         <p className="text-xs text-muted-foreground mt-4">vs last month (${last.toLocaleString()})</p>
+      </div>
+   );
+}
+
+async function RecentExpenses() {
+   const { data: expenses } = await getExpenses({ limit: 5 });
+
+   if (!expenses || expenses.length === 0) {
+      return (
+         <div className="text-center py-10">
+            <p className="text-muted-foreground">No expenses yet.</p>
+            <Link href="/add" className="text-primary font-medium mt-2 inline-block">
+               Add your first expense
+            </Link>
+         </div>
+      );
+   }
+
+   return (
+      <div className="space-y-4">
+         <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-lg">Recent Transactions</h3>
+            <Link href="/expenses" className="text-sm text-primary hover:underline">
+               View All
+            </Link>
+         </div>
+         <div className="space-y-3">
+            {expenses.map((expense: any) => (
+               <div key={expense.id} className="flex items-center justify-between p-4 bg-card border rounded-lg shadow-sm">
+                  <div className="flex items-center space-x-4">
+                     <div className="p-2 bg-primary/10 rounded-full">
+                        <Calendar className="w-4 h-4 text-primary" />
+                     </div>
+                     <div>
+                        <p className="font-medium">{expense.category.name}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(expense.date), "MMM d, yyyy")}</p>
+                     </div>
+                  </div>
+                  <div className="text-right">
+                     <p className="font-bold">-${Number(expense.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                     {expense.note && <p className="text-xs text-muted-foreground max-w-[100px] truncate">{expense.note}</p>}
+                  </div>
+               </div>
+            ))}
+         </div>
+      </div>
+   );
+}
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+   return (
+      <div className="flex flex-col min-h-screen pb-20">
+         <header className="flex justify-between items-center py-6">
+            <div>
+               <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+               <p className="text-muted-foreground">Welcome back</p>
+            </div>
+            <Link href="/add" className="bg-primary text-primary-foreground p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
+               <Plus className="w-6 h-6" />
+            </Link>
+         </header>
+
+         <Suspense fallback={<div className="h-32 bg-muted animate-pulse rounded-xl" />}>
+            <StatsCard />
+         </Suspense>
+
+         <Suspense
+            fallback={
+               <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                     <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
+                  ))}
+               </div>
+            }
+         >
+            <RecentExpenses />
+         </Suspense>
+      </div>
+   );
 }
