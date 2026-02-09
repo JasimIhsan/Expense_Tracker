@@ -1,7 +1,7 @@
 import { getFinancialSummary } from "@/app/actions/statistics";
 import { getTransactions } from "@/app/actions/transactions";
 import { format } from "date-fns";
-import { ArrowDownRight, ArrowUpRight, Plus, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -114,11 +114,11 @@ export default function Home() {
          <header className="flex justify-between items-center py-6">
             <div>
                <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-               <p className="text-muted-foreground">Welcome back</p>
+               <p className="text-muted-foreground">Welcome back, Jasim!</p>
             </div>
-            <Link href="/add" className="bg-primary text-primary-foreground p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
+            {/* <Link href="/add" className="bg-primary text-primary-foreground p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
                <Plus className="w-6 h-6" />
-            </Link>
+            </Link> */}
          </header>
 
          <Suspense fallback={<div className="h-32 bg-muted animate-pulse rounded-xl" />}>
