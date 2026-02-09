@@ -84,7 +84,7 @@ export default function StatisticsPage() {
          </div>
 
          {mode === "monthly" && breakdown.length > 0 ? (
-            <div className="bg-card border rounded-xl p-6 shadow-sm h-[400px]">
+            <div className="bg-card border rounded-xl p-6 pb-15 shadow-sm h-[400px]">
                <h3 className="font-semibold mb-4">Category Breakdown</h3>
                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
