@@ -66,6 +66,7 @@ async function RecentExpenses() {
             </Link>
          </div>
          <div className="space-y-3">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {expenses.map((expense: any) => (
                <div key={expense.id} className="flex items-center justify-between p-4 bg-card border rounded-lg shadow-sm">
                   <div className="flex items-center space-x-4">

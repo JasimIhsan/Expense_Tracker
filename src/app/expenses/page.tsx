@@ -34,6 +34,7 @@ export default async function ExpensesPage(props: Props) {
             {expenses.length === 0 ? (
                <div className="text-center py-10 text-muted-foreground">No expenses found.</div>
             ) : (
+               // eslint-disable-next-line @typescript-eslint/no-explicit-any
                expenses.map((expense: any) => (
                   <div key={expense.id} className="flex items-center justify-between p-4 bg-card border rounded-lg shadow-sm group">
                      <div className="flex items-center space-x-4">

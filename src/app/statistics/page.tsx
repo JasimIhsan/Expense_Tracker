@@ -15,34 +15,26 @@ export default function StatisticsPage() {
    const [breakdown, setBreakdown] = useState<{ name: string; value: number }[]>([]);
    const [total, setTotal] = useState(0);
 
-   const fetchData = async () => {
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-
-      if (mode === "monthly") {
-         const { data: breakdownData } = await getCategoryBreakdown(year, month);
-         const { data: totalData } = await getMonthlyTotal(year, month);
-
-         if (breakdownData) {
-            setBreakdown(Object.entries(breakdownData).map(([name, value]) => ({ name, value })));
-         }
-         if (totalData) setTotal(totalData);
-      } else {
-         // Yearly Logic - reusing monthly breakdown for simplicity for now, ideally should aggregate yearly
-         // Since getCategoryBreakdown takes year/month, we'd need a yearly version or loop.
-         // For now, let's just show yearly total and monthly breakdown of current month as placeholder/bug logic
-         // fixing logic:
-
-         // Implementing proper yearly breakdown fetch would require a new action or existing one modification
-         // For minimal scope, let's stick to monthly view primarily, or just show total for year.
-
-         const { data: totalData } = await getYearlyTotal(year);
-         if (totalData) setTotal(totalData);
-         setBreakdown([]); // Clear breakdown for yearly as we don't have the action yet
-      }
-   };
-
    useEffect(() => {
+      const fetchData = async () => {
+         const year = date.getFullYear();
+         const month = date.getMonth() + 1;
+
+         if (mode === "monthly") {
+            const { data: breakdownData } = await getCategoryBreakdown(year, month);
+            const { data: totalData } = await getMonthlyTotal(year, month);
+
+            if (breakdownData) {
+               setBreakdown(Object.entries(breakdownData).map(([name, value]) => ({ name, value })));
+            }
+            if (totalData) setTotal(totalData);
+         } else {
+            const { data: totalData } = await getYearlyTotal(year);
+            if (totalData) setTotal(totalData);
+            setBreakdown([]);
+         }
+      };
+
       fetchData();
    }, [date, mode]);
 
