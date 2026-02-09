@@ -118,7 +118,7 @@ export default function StatisticsPage() {
          </div>
 
          {/* Income vs Expense Chart */}
-         <div className="bg-card border rounded-xl p-6 shadow-sm mb-6 h-[300px]">
+         <div className="bg-card border rounded-xl p-6 pb-12 shadow-sm mb-6 h-[400px]">
             <h3 className="font-semibold mb-4">Income vs Expense</h3>
             <ResponsiveContainer width="100%" height="100%">
                <BarChart data={comparisonData}>
@@ -126,7 +126,7 @@ export default function StatisticsPage() {
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip formatter={(value: number | undefined) => `₹${(value || 0).toLocaleString("en-IN")}`} cursor={{ fill: "transparent" }} />
-                  <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="amount" radius={[4, 4, 0, 0]} barSize={50}>
                      {comparisonData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.name === "Income" ? "#16a34a" : "#dc2626"} />
                      ))}
