@@ -3,7 +3,7 @@
 import { formatDate } from "@/util";
 import { isToday, isYesterday } from "date-fns";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ExpenseActions } from "./expense-actions";
 
 type TransactionsListProps = {
@@ -13,6 +13,10 @@ type TransactionsListProps = {
 
 export function TransactionsList({ initialTransactions }: TransactionsListProps) {
    const [transactions, setTransactions] = useState(initialTransactions);
+
+   useEffect(() => {
+      setTransactions(initialTransactions);
+   }, [initialTransactions]);
 
    const handleDelete = (id: number) => {
       setTransactions((prev) => prev.filter((t) => t.id !== id));
