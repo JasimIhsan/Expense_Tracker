@@ -1,13 +1,32 @@
-import { getCategories } from "@/app/actions/categories";
+"use client";
+
+import api from "@/lib/axios";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { CategoriesClient } from "./categories-client";
 
-export const revalidate = 0;
+export default function CategoriesPage() {
+   const [expenseCategories, setExpenseCategories] = useState([]);
+   const [incomeCategories, setIncomeCategories] = useState([]);
+   const [loading, setLoading] = useState(true);
 
-export default async function CategoriesPage() {
-   const { data: expenseCategories } = await getCategories("EXPENSE");
-   const { data: incomeCategories } = await getCategories("INCOME");
+   useEffect(() => {
+      const fetchCategories = async () => {
+         try {
+            const [expRes, incRes] = await Promise.all([api.get("/categories?type=EXPENSE"), api.get("/categories?type=INCOME")]);
+
+            if (expRes.data.success) setExpenseCategories(expRes.data.data);
+            if (incRes.data.success) setIncomeCategories(incRes.data.data);
+         } catch (error) {
+            console.error("Failed to fetch categories", error);
+         } finally {
+            setLoading(false);
+         }
+      };
+
+      fetchCategories();
+   }, []);
 
    return (
       <div className="min-h-screen pb-20 pt-6">
@@ -18,7 +37,7 @@ export default async function CategoriesPage() {
             <h1 className="text-2xl font-bold">Categories</h1>
          </div>
 
-         <CategoriesClient initialExpenseCategories={expenseCategories || []} initialIncomeCategories={incomeCategories || []} />
+         {loading ? <div className="text-center text-muted-foreground">Loading categories...</div> : <CategoriesClient initialExpenseCategories={expenseCategories} initialIncomeCategories={incomeCategories} />}
       </div>
    );
 }

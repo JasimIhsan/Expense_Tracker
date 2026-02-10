@@ -1,40 +1,65 @@
-import { getAvgDailyExpense, getCategoryBreakdown, getFinancialSummary, getYearlySummary } from "@/app/actions/statistics";
+"use client";
+
+import api from "@/lib/axios";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { StatisticsCharts } from "./statistics-charts";
 import { StatisticsControls } from "./statistics-controls";
 
-export const revalidate = 0;
-
-type Props = {
-   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-};
-
-export default async function StatisticsPage(props: Props) {
-   const searchParams = await props.searchParams;
-   const mode = (searchParams.mode as "monthly" | "yearly") || "monthly";
+function StatisticsContent() {
+   const searchParams = useSearchParams();
+   const mode = (searchParams.get("mode") as "monthly" | "yearly") || "monthly";
    const date = new Date();
-   const month = Number(searchParams.month) || date.getMonth() + 1;
-   const year = Number(searchParams.year) || date.getFullYear();
+   const month = Number(searchParams.get("month")) || date.getMonth() + 1;
+   const year = Number(searchParams.get("year")) || date.getFullYear();
 
-   let financials = { income: 0, expense: 0, balance: 0 };
-   let breakdown: { name: string; value: number }[] = [];
-   let avgDaily = 0;
+   const [financials, setFinancials] = useState({ income: 0, expense: 0, balance: 0 });
+   const [breakdown, setBreakdown] = useState<{ name: string; value: number }[]>([]);
+   const [avgDaily, setAvgDaily] = useState(0);
+   const [loading, setLoading] = useState(true);
 
-   if (mode === "monthly") {
-      const { data: breakdownData } = await getCategoryBreakdown(year, month);
-      const { data: financialData } = await getFinancialSummary(year, month);
-      const { data: avgData } = await getAvgDailyExpense(year, month);
+   useEffect(() => {
+      const fetchData = async () => {
+         setLoading(true);
+         try {
+            // We can fetch everything in one go or separate.
+            // The API supports fetching all if no type specified, but our types are different.
+            // Let's use separate calls or a combined call if specific.
+            // The route default returns all.
+            const response = await api.get(`/statistics?mode=${mode}&year=${year}&month=${month}`);
 
-      if (breakdownData) {
-         breakdown = Object.entries(breakdownData).map(([name, value]) => ({ name, value }));
-      }
-      if (financialData) financials = financialData;
-      if (avgData) avgDaily = avgData;
-   } else {
-      const { data: financialData } = await getYearlySummary(year);
-      if (financialData) financials = financialData;
-   }
+            if (response.data.success) {
+               if (mode === "monthly") {
+                  const { summary, breakdown: breakdownData, avgDaily: avg } = response.data.data;
+                  setFinancials(summary);
+                  setAvgDaily(avg);
+                  if (breakdownData) {
+                     setBreakdown(Object.entries(breakdownData).map(([name, value]) => ({ name, value: value as number })));
+                  } else {
+                     setBreakdown([]);
+                  }
+               } else {
+                  // Yearly mode - API behaves slightly differently based on implementation plan/code
+                  // Let's check the API code. It returns different structure for yearly.
+                  // Wait, the API route returns `result` directly for yearly which is `{ success, data: { income... } }`.
+                  // It does NOT return breakdown or avg for yearly in the current code path.
+                  // So we need to handle that structure.
+                  setFinancials(response.data.data);
+                  setBreakdown([]);
+                  setAvgDaily(0);
+               }
+            }
+         } catch (error) {
+            console.error("Failed to fetch statistics", error);
+         } finally {
+            setLoading(false);
+         }
+      };
+
+      fetchData();
+   }, [mode, month, year]);
 
    return (
       <div className="min-h-screen pb-24 pt-6">
@@ -47,7 +72,15 @@ export default async function StatisticsPage(props: Props) {
 
          <StatisticsControls />
 
-         <StatisticsCharts mode={mode} financials={financials} avgDaily={avgDaily} breakdown={breakdown} />
+         {loading ? <div className="h-96 flex items-center justify-center text-muted-foreground">Loading statistics...</div> : <StatisticsCharts mode={mode} financials={financials} avgDaily={avgDaily} breakdown={breakdown} />}
       </div>
+   );
+}
+
+export default function StatisticsPage() {
+   return (
+      <Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+         <StatisticsContent />
+      </Suspense>
    );
 }

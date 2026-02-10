@@ -1,8 +1,8 @@
 "use client";
 
-import { deleteTransaction } from "@/app/actions/transactions";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import api from "@/lib/axios";
 import { Edit, MoreVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,11 +17,16 @@ export function ExpenseActions({ id, onDelete }: { id: number; onDelete?: (id: n
 
       setLoading(true);
       try {
-         await deleteTransaction(id);
+         await api.delete(`/transactions/${id}`);
          if (onDelete) {
             onDelete(id);
          } else {
             router.refresh();
+            // Or better: trigger a global refresh or rely on parent re-rendering if passed down
+            // Since we moved to client fetching, router.refresh() might not reload the data if useEffect dependency array doesn't encompass it.
+            // But usually window.location.reload() is too heavy.
+            // For now, let's assume the parent handles state updates or we just reload.
+            window.location.reload();
          }
       } catch (error) {
          console.error(error);

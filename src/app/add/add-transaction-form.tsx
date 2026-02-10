@@ -1,10 +1,10 @@
 "use client";
 
-import { addTransaction } from "@/app/actions/transactions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import api from "@/lib/axios";
 import { TransactionType } from "@prisma/client";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -33,7 +33,7 @@ export function AddTransactionForm({ expenseCategories, incomeCategories }: { ex
       setLoading(true);
 
       try {
-         const result = await addTransaction({
+         const result = await api.post("/transactions", {
             amount: parseFloat(formData.amount),
             categoryId: parseInt(formData.categoryId),
             date: new Date(formData.date),
@@ -41,9 +41,9 @@ export function AddTransactionForm({ expenseCategories, incomeCategories }: { ex
             type,
          });
 
-         if (result.success) {
+         if (result.data.success) {
             router.push("/");
-            router.refresh();
+            // No need for router.refresh() if moving to dashboard which fetches on mount
          } else {
             alert("Failed to add transaction");
          }

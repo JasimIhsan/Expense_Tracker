@@ -1,10 +1,10 @@
 "use client";
 
-import { deleteTransaction, updateTransaction } from "@/app/actions/transactions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import api from "@/lib/axios";
 import { TransactionType } from "@prisma/client";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -32,7 +32,7 @@ export function EditTransactionForm({ transaction, expenseCategories, incomeCate
    const [formData, setFormData] = useState({
       amount: transaction.amount.toString(),
       categoryId: transaction.categoryId.toString(),
-      date: new Date(transaction.date).toISOString().split("T")[0],
+      date: new Date(transaction.date).toString() !== "Invalid Date" ? new Date(transaction.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       note: transaction.note || "",
    });
 
@@ -43,7 +43,7 @@ export function EditTransactionForm({ transaction, expenseCategories, incomeCate
       setSaving(true);
 
       try {
-         const result = await updateTransaction(transaction.id, {
+         const result = await api.put(`/transactions/${transaction.id}`, {
             amount: parseFloat(formData.amount),
             categoryId: parseInt(formData.categoryId),
             date: new Date(formData.date),
@@ -51,9 +51,9 @@ export function EditTransactionForm({ transaction, expenseCategories, incomeCate
             type,
          });
 
-         if (result.success) {
+         if (result.data.success) {
             router.push("/");
-            router.refresh();
+            // window.location.reload(); // Optional if standard navigation implies data re-fetch on destination
          } else {
             alert("Failed to update transaction");
          }
@@ -69,10 +69,9 @@ export function EditTransactionForm({ transaction, expenseCategories, incomeCate
       if (!confirm("Are you sure you want to delete this transaction?")) return;
       setDeleting(true);
       try {
-         const result = await deleteTransaction(transaction.id);
-         if (result.success) {
+         const result = await api.delete(`/transactions/${transaction.id}`);
+         if (result.data.success) {
             router.push("/");
-            router.refresh();
          } else {
             alert("Failed to delete transaction");
          }

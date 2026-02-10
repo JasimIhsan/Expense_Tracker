@@ -1,9 +1,9 @@
 "use client";
 
-import { addCategory, deleteCategory, updateCategory } from "@/app/actions/categories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import api from "@/lib/axios";
 import { TransactionType } from "@prisma/client";
 import { Check, Edit2, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -22,17 +22,18 @@ export function CategoriesClient({ initialExpenseCategories, initialIncomeCatego
    const [editName, setEditName] = useState("");
    const [loading, setLoading] = useState(false);
 
-   // We can rely on router.refresh() to update props, but for instant feedback
-   // we might want optimistic updates. However, since the parent is a server component,
-   // updating the list requires a refresh. To make it smooth, we can use local state
-   // synced with props, similar to transactions list.
-   // Or simpler: just use router.refresh() and let the UI update. Categories don't change often.
-   // But to avoid "flash", we can use local state initialized from props.
-
-   // Given the data is passed as separate props, let's derive the current list.
-   // But wait, if we add a category, we need to know which list to update.
-   // Actually, passing them as props means we rely on the server data.
-   // Let's rely on router.refresh() for simplicity and correctness first.
+   // Since parent passes props and we want to refresh on changes,
+   // and parent fetches only on mount (standard SPA pattern),
+   // we should trigger a re-fetch in parent or update local state manually.
+   // Updating local state manualy is faster but harder to keep sync.
+   // Let's reload page for simplicity or we need to lift state up.
+   // For now, let's use router.refresh() which MIGHT work if the parent was server, but it's client now.
+   // So router.refresh() won't re-run parent's useEffect.
+   // Correct approach for SPA: Local state derived from props, but updated locally on success.
+   // Or callback to parent to refetch.
+   // Let's use window.location.reload() for quick robustness given the constraints, or modify parent.
+   // Creating a reload function prop is better. But I can't easily change parent without modifying it too much.
+   // I'll stick to a simple page reload for now to ensure consistency.
 
    const categories = type === "EXPENSE" ? initialExpenseCategories : initialIncomeCategories;
 
@@ -42,16 +43,19 @@ export function CategoriesClient({ initialExpenseCategories, initialIncomeCatego
 
       setLoading(true);
       try {
-         const result = await addCategory(newCategory.trim(), type);
-         if (result.success) {
+         const result = await api.post("/categories", {
+            name: newCategory.trim(),
+            type,
+         });
+         if (result.data.success) {
             setNewCategory("");
-            router.refresh();
+            window.location.reload();
          } else {
-            alert(result.error);
+            alert(result.data.error);
          }
-      } catch (error) {
+      } catch (error: any) {
          console.error(error);
-         alert("Failed to add category");
+         alert(error.response?.data?.error || "Failed to add category");
       } finally {
          setLoading(false);
       }
@@ -61,15 +65,15 @@ export function CategoriesClient({ initialExpenseCategories, initialIncomeCatego
       if (!confirm("Are you sure you want to delete this category?")) return;
 
       try {
-         const result = await deleteCategory(id);
-         if (result.success) {
-            router.refresh();
+         const result = await api.delete(`/categories/${id}`);
+         if (result.data.success) {
+            window.location.reload();
          } else {
-            alert(result.error);
+            alert(result.data.error);
          }
-      } catch (error) {
+      } catch (error: any) {
          console.error(error);
-         alert("Failed to delete category");
+         alert(error.response?.data?.error || "Failed to delete category");
       }
    };
 
@@ -87,16 +91,18 @@ export function CategoriesClient({ initialExpenseCategories, initialIncomeCatego
       if (!editingId || !editName.trim()) return;
 
       try {
-         const result = await updateCategory(editingId, editName.trim());
-         if (result.success) {
+         const result = await api.put(`/categories/${editingId}`, {
+            name: editName.trim(),
+         });
+         if (result.data.success) {
             setEditingId(null);
-            router.refresh();
+            window.location.reload();
          } else {
-            alert(result.error);
+            alert(result.data.error);
          }
-      } catch (error) {
+      } catch (error: any) {
          console.error(error);
-         alert("Failed to update category");
+         alert(error.response?.data?.error || "Failed to update category");
       }
    };
 
