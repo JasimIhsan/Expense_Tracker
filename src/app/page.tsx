@@ -72,7 +72,7 @@ async function RecentTransactions() {
    return (
       <div className="space-y-4">
          <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-lg">Today's Transactions</h3>
+            <h3 className="font-semibold text-lg">Today&apos;s Transactions</h3>
             <Link href="/expenses" className="text-sm text-primary hover:underline">
                View All
             </Link>
