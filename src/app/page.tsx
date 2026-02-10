@@ -1,5 +1,6 @@
 import { getFinancialSummary } from "@/app/actions/statistics";
 import { getTransactions } from "@/app/actions/transactions";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -114,9 +115,7 @@ export default function Home() {
                <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
                <p className="text-muted-foreground">Welcome back, Jasim!</p>
             </div>
-            {/* <Link href="/add" className="bg-primary text-primary-foreground p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
-               <Plus className="w-6 h-6" />
-            </Link> */}
+            <ThemeToggle />
          </header>
 
          <Suspense fallback={<div className="h-32 bg-muted animate-pulse rounded-xl" />}>

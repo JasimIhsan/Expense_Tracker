@@ -38,12 +38,7 @@ export default function RootLayout({
          <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground pb-20 md:pb-0 md:pl-64`}>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
                <PwaRegister />
-               <main className="container mx-auto p-4 max-w-md md:max-w-4xl relative">
-                  {/* <div className="absolute top-4 right-4 z-10">
-                     <ThemeToggle />  
-                  </div> */}
-                  {children}
-               </main>
+               <main className="container mx-auto p-4 max-w-md md:max-w-4xl relative">{children}</main>
                <BottomNav />
             </ThemeProvider>
          </body>
