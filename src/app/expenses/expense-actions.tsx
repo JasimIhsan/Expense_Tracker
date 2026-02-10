@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function ExpenseActions({ id }: { id: number }) {
+export function ExpenseActions({ id, onDelete }: { id: number; onDelete?: (id: number) => void }) {
    const [loading, setLoading] = useState(false);
    const router = useRouter();
 
@@ -18,7 +18,11 @@ export function ExpenseActions({ id }: { id: number }) {
       setLoading(true);
       try {
          await deleteTransaction(id);
-         router.refresh();
+         if (onDelete) {
+            onDelete(id);
+         } else {
+            router.refresh();
+         }
       } catch (error) {
          console.error(error);
          alert("Failed to delete transaction");

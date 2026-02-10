@@ -118,7 +118,7 @@ export default function Home() {
             <ThemeToggle />
          </header>
 
-         <Suspense fallback={<div className="h-32 bg-muted animate-pulse rounded-xl" />}>
+         <Suspense fallback={<div className="h-32 mb-4 bg-muted animate-pulse rounded-xl" />}>
             <StatsCard />
          </Suspense>
 
