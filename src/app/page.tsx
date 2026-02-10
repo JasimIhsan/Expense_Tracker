@@ -1,6 +1,5 @@
 import { getFinancialSummary } from "@/app/actions/statistics";
 import { getTransactions } from "@/app/actions/transactions";
-import { format } from "date-fns";
 import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -56,14 +55,14 @@ async function StatsCard() {
 }
 
 async function RecentTransactions() {
-   const { data: transactions } = await getTransactions({ limit: 5 });
+   const { data: transactions } = await getTransactions({ limit: 100, date: "today" });
 
    if (!transactions || transactions.length === 0) {
       return (
          <div className="text-center py-10">
-            <p className="text-muted-foreground">No transactions yet.</p>
+            <p className="text-muted-foreground">No transactions for today.</p>
             <Link href="/add" className="text-primary font-medium mt-2 inline-block">
-               Add your first transaction
+               Add a transaction
             </Link>
          </div>
       );
@@ -72,34 +71,33 @@ async function RecentTransactions() {
    return (
       <div className="space-y-4">
          <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-lg">Recent Transactions</h3>
-            {/* <Link href="/transactions" className="text-sm text-primary hover:underline">
-               View All
-            </Link> */}
-            {/* Linking to /transactions page which was /expenses. User didn't ask to rename the expenses route, but logical. Keeping it safe, maybe link to nothing or expenses? 
-               Wait, I should update expenses page to be transactions page too.
-               For now, let's keep the link to /expenses and update that page next.
-            */}
+            <h3 className="font-semibold text-lg">Today's Transactions</h3>
             <Link href="/expenses" className="text-sm text-primary hover:underline">
                View All
             </Link>
          </div>
+
          <div className="space-y-3">
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {transactions.map((t: any) => (
-               <div key={t.id} className="flex items-center justify-between p-4 bg-card border rounded-lg shadow-sm">
+               <div key={t.id} className="group flex items-center justify-between p-4 bg-card border rounded-lg shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center space-x-4">
                      <div className={`p-2 rounded-full ${t.type === "INCOME" ? "bg-green-500/10" : "bg-red-500/10"}`}>{t.type === "INCOME" ? <ArrowDownRight className="w-4 h-4 text-green-500" /> : <ArrowUpRight className="w-4 h-4 text-red-500" />}</div>
                      <div>
                         <p className="font-medium">{t.category.name}</p>
-                        <p className="text-xs text-muted-foreground">{format(new Date(t.date), "MMM d, yyyy")}</p>
+                        {/* <p className="text-xs text-muted-foreground">{format(new Date(t.date), "h:mm a")}</p> */}
+                        {t.note && <p className="text-xs text-muted-foreground max-w-[100px] truncate">{t.note}</p>}
                      </div>
                   </div>
-                  <div className="text-right">
-                     <p className={`font-bold ${t.type === "INCOME" ? "text-green-600" : "text-foreground"}`}>
-                        {t.type === "INCOME" ? "+" : "-"}₹{Number(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                     </p>
-                     {t.note && <p className="text-xs text-muted-foreground max-w-[100px] truncate">{t.note}</p>}
+                  <div className="flex items-center gap-3">
+                     <div className="text-right">
+                        <p className={`font-bold ${t.type === "INCOME" ? "text-green-600" : "text-foreground"}`}>
+                           {t.type === "INCOME" ? "+" : "-"}₹{Number(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </p>
+                     </div>
+                     {/* <Link href={`/edit/${t.id}`} className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground">
+                        <Pencil className="w-4 h-4" />
+                     </Link> */}
                   </div>
                </div>
             ))}
