@@ -29,6 +29,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
     seedDefaults(session?.user.id ?? LOCAL_USER).catch(console.error);
   }, [session?.user.id]);
 
+  // Surface unhandled rejections (Dexie errors are async) with their stack.
+  useEffect(() => {
+    const onReject = (e: PromiseRejectionEvent) => console.error("[unhandled]", e.reason?.message, e.reason?.stack);
+    window.addEventListener("unhandledrejection", onReject);
+    return () => window.removeEventListener("unhandledrejection", onReject);
+  }, []);
+
   // Parse queued notes on reconnect / resume, independent of sign-in.
   useEffect(() => {
     const run = () => document.visibilityState === "visible" && drainQueue().catch(console.error);

@@ -22,10 +22,17 @@ export function QuickAdd() {
   const { categories, accounts, categoryById } = useLookups();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [drafts, setDraftsState] = useState<Draft[]>([]);
   const [countdown, setCountdown] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Mirror of `drafts` for the countdown timer, so saving never happens inside a state updater
+  // (React runs updaters twice in dev, which would insert the rows twice).
+  const draftsRef = useRef<Draft[]>([]);
+  const setDrafts = useCallback((next: Draft[] | ((d: Draft[]) => Draft[])) => {
+    draftsRef.current = typeof next === "function" ? next(draftsRef.current) : next;
+    setDraftsState(draftsRef.current);
+  }, []);
 
   const clearTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -62,7 +69,7 @@ export function QuickAdd() {
         },
       });
     },
-    [settings],
+    [settings, setDrafts],
   );
 
   // Auto-save countdown once drafts appear.
@@ -78,12 +85,7 @@ export function QuickAdd() {
       timerRef.current = setInterval(() => {
         left -= 1;
         setCountdown(left);
-        if (left <= 0) {
-          setDrafts((current) => {
-            void saveDrafts(current);
-            return [];
-          });
-        }
+        if (left <= 0) void saveDrafts(draftsRef.current);
       }, 1000);
     },
     [settings.autoSaveSeconds, saveDrafts],
@@ -120,7 +122,7 @@ export function QuickAdd() {
         setBusy(false);
       }
     },
-    [busy, startCountdown],
+    [busy, startCountdown, setDrafts],
   );
 
   const voice = useVoice((t) => {
