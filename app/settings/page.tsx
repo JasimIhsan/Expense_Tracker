@@ -94,7 +94,7 @@ export default function SettingsPage() {
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Not configured. Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in the deployment to enable sync.
+            Not configured. Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> in the deployment to enable sync.
           </p>
         )}
       </Section>

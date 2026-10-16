@@ -52,7 +52,7 @@ Vercel AI SDK with `@ai-sdk/groq` · Recharts · Vitest.
    - Open the SQL editor and run `supabase/migrations/0001_init.sql`.
    - Authentication → Providers: enable Email (magic link); optionally Google. Add your site URL under URL configuration.
    - Copy the Project URL and anon key from Settings → API into `.env.local` (see `.env.example`):
-     `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Without them the app runs device-only.
+     `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the `sb_publishable_…` key; the legacy anon key works too). Without them the app runs device-only.
 3. **Groq (optional, for AI and Whisper)**
    - Create one or more free keys at console.groq.com and set `GROQ_API_KEYS=gsk_a,gsk_b` in `.env.local`.
    - Keys are used only by the server route `/api/groq`; the browser never sees them. When one key is rate-limited the
