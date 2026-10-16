@@ -10,15 +10,8 @@ const withSerwist = withSerwistInit({
   reloadOnOnline: false,
 });
 
-const nextConfig: NextConfig = {
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
-  },
-};
+// Tailwind runs through postcss.config.mjs so dev (Turbopack) and the
+// production webpack build produce the same CSS.
+const nextConfig: NextConfig = {};
 
 export default withSerwist(nextConfig);

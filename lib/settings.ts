@@ -20,11 +20,9 @@ export interface Settings {
   autoSaveSeconds: number;
 }
 
-export const DEFAULT_MODELS = [
-  "openai/gpt-oss-20b",
-  "llama-3.1-8b-instant",
-  "llama-3.3-70b-versatile",
-];
+/** Tried in order. Checked against Groq's /models list on 2026-10-17; the old llama-3.x ids are gone. */
+export const DEFAULT_MODELS = ["openai/gpt-oss-20b", "qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+const RETIRED_MODELS = new Set(["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"]);
 
 const DEFAULTS: Settings = {
   onboarded: false,
@@ -49,6 +47,9 @@ function read(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
     cache = raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) } : DEFAULTS;
+    // Drop model ids Groq has retired; fall back to the current defaults if nothing is left.
+    const models = cache.models.filter((m) => !RETIRED_MODELS.has(m));
+    cache = { ...cache, models: models.length ? models : DEFAULT_MODELS };
   } catch {
     cache = DEFAULTS;
   }
