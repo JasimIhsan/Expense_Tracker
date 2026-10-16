@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { QuickAdd } from "@/components/QuickAdd";
 import Link from "next/link";
 import { startOfDay, startOfMonth, startOfWeek, addDays } from "date-fns";
 import { Cloud, CloudOff, RefreshCw } from "lucide-react";
@@ -54,6 +55,10 @@ export default function HomePage() {
           {sync.pending > 0 && <span>{sync.pending}</span>}
         </Link>
       </header>
+
+      <Suspense>
+        <QuickAdd />
+      </Suspense>
 
       <div className="grid grid-cols-3 gap-2">
         <Stat label="Today" {...today} />

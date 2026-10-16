@@ -9,6 +9,7 @@ import { startAuth, useSession } from "@/lib/auth/session";
 import { seedDefaults } from "@/lib/db/seed";
 import { resetCursors, syncNow } from "@/lib/sync/engine";
 import { LOCAL_USER } from "@/lib/db/schema";
+import { drainQueue } from "@/lib/ai/queue";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const settings = useSettings();
@@ -27,6 +28,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
     startAuth();
     seedDefaults(session?.user.id ?? LOCAL_USER).catch(console.error);
   }, [session?.user.id]);
+
+  // Parse queued notes on reconnect / resume, independent of sign-in.
+  useEffect(() => {
+    const run = () => document.visibilityState === "visible" && drainQueue().catch(console.error);
+    run();
+    window.addEventListener("online", run);
+    document.addEventListener("visibilitychange", run);
+    return () => {
+      window.removeEventListener("online", run);
+      document.removeEventListener("visibilitychange", run);
+    };
+  }, []);
 
   // Sync on sign-in, on reconnect and when the app comes back to the foreground.
   useEffect(() => {
