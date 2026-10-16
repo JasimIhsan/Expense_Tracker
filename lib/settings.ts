@@ -20,6 +20,7 @@ export interface Settings {
   onboarded: boolean;
   supabaseUrl: string;
   supabaseAnonKey: string;
+  /** @deprecated Keys now live in the `api_keys` table; kept only so old installs migrate. */
   groqKeys: GroqKey[];
   models: string[];
   whisperModel: string;

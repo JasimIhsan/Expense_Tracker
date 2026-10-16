@@ -22,12 +22,14 @@ and a free [Supabase](https://supabase.com) project for sync across devices. Key
    ```
 2. **Supabase (optional, for sync)**
    - Create a free project at supabase.com.
-   - Open the SQL editor and run `supabase/migrations/0001_init.sql`.
+   - Open the SQL editor and run every file in `supabase/migrations/` in order (`0001_init.sql`, `0002_api_keys.sql`).
    - Authentication → Providers: enable Email (magic link). Add your site URL under URL configuration.
    - Copy the Project URL and anon key from Settings → API. Either paste them in the app's onboarding screen,
      or put them in `.env.local` (see `.env.example`) so your deployment has them as defaults.
 3. **Groq (optional, for AI)**
-   - Create a free key at console.groq.com and paste it into the app (onboarding or Settings → AI keys).
+   - Create a free key at console.groq.com and paste it into the app (onboarding or More → AI keys).
+   - Keys are saved in the `api_keys` table of your own Supabase project (RLS, per user) and synced to every device you sign in
+     on; without sign-in they stay in the device's IndexedDB.
    - Add several keys; when one is rate-limited the next is used, and when all fail the next model in the chain is tried.
 4. **Dev / build**
    ```bash

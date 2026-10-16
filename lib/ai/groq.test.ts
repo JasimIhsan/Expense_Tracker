@@ -1,8 +1,10 @@
+import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { chatObject, AiError } from "./groq";
-import { getSettings, updateSettings } from "../settings";
-import { addGroqKey } from "./keys";
+import { updateSettings } from "../settings";
+import { __setKeysForTests, allKeys } from "./keys";
+import type { ApiKey } from "../db/schema";
 
 const Schema = z.object({ items: z.array(z.string()) });
 
@@ -19,15 +21,19 @@ const ok = (content: unknown) =>
     usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
   });
 
+const key = (id: string, k: string): ApiKey => ({
+  id, user_id: "local", provider: "groq", label: id, key: k, cooldown_until: 0, invalid: 0, last_used: null,
+  created_at: "", updated_at: "", deleted_at: null, dirty: 0,
+});
+
 const call = (fetchImpl: typeof fetch) => chatObject(Schema, "sys", "x", { fetchImpl });
 const headerOf = (init: RequestInit | undefined, name: string) => new Headers(init?.headers).get(name);
 const bodyOf = (init: RequestInit | undefined) => JSON.parse(String(init?.body)) as { model: string };
 
 describe("Groq failover", () => {
   beforeEach(() => {
-    updateSettings({ groqKeys: [], models: ["m1", "m2"] });
-    addGroqKey("k1", "one");
-    addGroqKey("k2", "two");
+    updateSettings({ models: ["m1", "m2"] });
+    __setKeysForTests([key("one", "k1"), key("two", "k2")]);
   });
 
   it("returns the parsed object", async () => {
@@ -46,8 +52,7 @@ describe("Groq failover", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(headerOf(fetchImpl.mock.calls[0][1], "authorization")).toBe("Bearer k1");
     expect(headerOf(fetchImpl.mock.calls[1][1], "authorization")).toBe("Bearer k2");
-    const k1 = getSettings().groqKeys.find((k) => k.key === "k1")!;
-    expect(k1.cooldownUntil).toBeGreaterThan(Date.now() + 20_000);
+    expect(allKeys().find((k) => k.key === "k1")!.cooldown_until).toBeGreaterThan(Date.now() + 20_000);
   });
 
   it("moves to the next model on 404", async () => {
@@ -66,7 +71,7 @@ describe("Groq failover", () => {
       .mockResolvedValueOnce(response(401, {}))
       .mockResolvedValueOnce(ok({ items: [] }));
     await call(fetchImpl);
-    expect(getSettings().groqKeys.find((k) => k.key === "k1")!.invalid).toBe(true);
+    expect(allKeys().find((k) => k.key === "k1")!.invalid).toBe(1);
   });
 
   it("throws all-failed when every key is exhausted", async () => {
@@ -75,7 +80,7 @@ describe("Groq failover", () => {
   });
 
   it("throws no-keys without keys", async () => {
-    updateSettings({ groqKeys: [] });
+    __setKeysForTests([]);
     await expect(call(vi.fn<typeof fetch>())).rejects.toMatchObject({ kind: "no-keys" });
   });
 });

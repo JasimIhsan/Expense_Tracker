@@ -1,7 +1,8 @@
 import { createGroq } from "@ai-sdk/groq";
 import { APICallError, generateText, Output, transcribe as sdkTranscribe, type FlexibleSchema } from "ai";
-import { getSettings, type GroqKey } from "../settings";
-import { availableKeys, patchGroqKey } from "./keys";
+import { getSettings } from "../settings";
+import type { ApiKey } from "../db/schema";
+import { allKeys, availableKeys, patchGroqKey, startKeyStore } from "./keys";
 
 /** Groq through the Vercel AI SDK (`@ai-sdk/groq`), with our own key pool and model chain on top. */
 export const GROQ_BASE = "https://api.groq.com/openai/v1";
@@ -35,10 +36,11 @@ function cooldownMs(headers: Record<string, string> | undefined) {
  * 401/403 mark it invalid, and 400/404 (model not available) skip to the next model.
  */
 export async function withFailover<T>(
-  attempt: (key: GroqKey, model: string) => Promise<T>,
+  attempt: (key: ApiKey, model: string) => Promise<T>,
   models: string[] = getSettings().models,
 ): Promise<T> {
-  if (getSettings().groqKeys.length === 0) throw new AiError("No Groq API key configured", "no-keys");
+  await startKeyStore();
+  if (allKeys().length === 0) throw new AiError("No Groq API key configured", "no-keys");
   let lastError = "";
   modelLoop: for (const model of models) {
     const keys = availableKeys();
@@ -46,10 +48,10 @@ export async function withFailover<T>(
     for (const key of keys) {
       try {
         const out = await attempt(key, model);
-        patchGroqKey(key.id, { lastUsed: Date.now() });
+        patchGroqKey(key.id, { last_used: Date.now() });
         return out;
       } catch (e) {
-        patchGroqKey(key.id, { lastUsed: Date.now() });
+        patchGroqKey(key.id, { last_used: Date.now() });
         if (!APICallError.isInstance(e) || e.statusCode === undefined) {
           // Network/CORS/parse failure: another key will not help, but keep trying.
           lastError = e instanceof Error ? e.message : String(e);
@@ -58,11 +60,11 @@ export async function withFailover<T>(
         const status = e.statusCode;
         lastError = `${status} ${(e.responseBody ?? e.message).slice(0, 200)}`;
         if (status === 429 || status >= 500) {
-          patchGroqKey(key.id, { cooldownUntil: Date.now() + cooldownMs(e.responseHeaders) });
+          patchGroqKey(key.id, { cooldown_until: Date.now() + cooldownMs(e.responseHeaders) });
           continue;
         }
         if (status === 401 || status === 403) {
-          patchGroqKey(key.id, { invalid: true });
+          patchGroqKey(key.id, { invalid: 1 });
           continue;
         }
         // 400/404/413: model or request problem → next model.

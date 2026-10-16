@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSettings, updateSettings } from "@/lib/settings";
-import { addGroqKey, removeGroqKey } from "@/lib/ai/keys";
+import { addGroqKey, removeGroqKey, useApiKeys } from "@/lib/ai/keys";
 import { signOut, useSession } from "@/lib/auth/session";
 import { getSupabase, resetSupabase } from "@/lib/supabase/client";
 import { syncNow, useSyncState } from "@/lib/sync/engine";
@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const s = useSettings();
   const session = useSession();
   const sync = useSyncState();
+  const keys = useApiKeys();
   const [newKey, setNewKey] = useState("");
   const [email, setEmail] = useState("");
   const [url, setUrl] = useState(s.supabaseUrl);
@@ -119,17 +120,17 @@ export default function SettingsPage() {
 
       <Section title="AI keys (Groq)">
         <p className="text-xs text-muted-foreground">
-          Keys stay on this device. When one is rate-limited the next is used; when every key fails, the next model in the list is tried.
+          Stored in your own Supabase project (synced to every device you sign in on). When one is rate-limited the next is used; when every key fails, the next model in the list is tried.
         </p>
         <ul className="flex flex-col gap-2">
-          {s.groqKeys.map((k) => {
-            const cooling = k.cooldownUntil > now;
+          {keys.map((k) => {
+            const cooling = k.cooldown_until > now;
             return (
               <li key={k.id} className="flex items-center gap-2 text-sm">
                 <span className="flex-1">
                   {k.label} <span className="font-mono text-xs text-muted-foreground">…{k.key.slice(-6)}</span>
                   <span className="ml-2 text-xs text-muted-foreground">
-                    {k.invalid ? "invalid" : cooling ? "rate limited" : k.lastUsed ? "ok" : "unused"}
+                    {k.invalid ? "invalid" : cooling ? "rate limited" : k.last_used ? "ok" : "unused"}
                   </span>
                 </span>
                 <Button variant="ghost" size="icon-sm" aria-label="Remove key" onClick={() => removeGroqKey(k.id)}>
