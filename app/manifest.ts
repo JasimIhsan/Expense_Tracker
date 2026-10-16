@@ -2,6 +2,12 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    // Web Share Target: share a bank SMS / UPI notification into the app.
+    share_target: {
+      action: "/share",
+      method: "GET",
+      params: { title: "title", text: "text", url: "url" },
+    },
     name: "Paisa — Expense Tracker",
     short_name: "Paisa",
     description: "Track credits and debits by voice or text. Fast, offline, your own keys.",

@@ -11,7 +11,7 @@ import { resetCursors, syncNow } from "@/lib/sync/engine";
 import { LOCAL_USER } from "@/lib/db/schema";
 import { drainQueue } from "@/lib/ai/queue";
 import { runDueRules } from "@/lib/recurring";
-import { migrateLegacyKeys, startKeyStore } from "@/lib/ai/keys";
+import { loadAiStatus } from "@/lib/ai/status";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const settings = useSettings();
@@ -31,9 +31,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     seedDefaults(session?.user.id ?? LOCAL_USER).catch(console.error);
   }, [session?.user.id]);
 
-  // Load the API key pool and move any keys an older version kept in localStorage.
+  // Learn whether this deployment has Groq keys (cached for offline starts).
   useEffect(() => {
-    startKeyStore().then(migrateLegacyKeys).catch(console.error);
+    void loadAiStatus();
   }, []);
 
   // Surface unhandled rejections (Dexie errors are async) with their stack.

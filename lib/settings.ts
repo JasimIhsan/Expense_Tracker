@@ -6,22 +6,8 @@ import { useSyncExternalStore } from "react";
  * Device-local settings. Kept in localStorage (not Dexie) so they are available
  * synchronously on first render and never leave the device.
  */
-export interface GroqKey {
-  id: string;
-  label: string;
-  key: string;
-  /** Epoch ms until which the key is on cooldown after a 429. */
-  cooldownUntil: number;
-  invalid: boolean;
-  lastUsed: number | null;
-}
-
 export interface Settings {
   onboarded: boolean;
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  /** @deprecated Keys now live in the `api_keys` table; kept only so old installs migrate. */
-  groqKeys: GroqKey[];
   models: string[];
   whisperModel: string;
   speechLang: string;
@@ -42,9 +28,6 @@ export const DEFAULT_MODELS = [
 
 const DEFAULTS: Settings = {
   onboarded: false,
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-  groqKeys: [],
   models: DEFAULT_MODELS,
   whisperModel: "whisper-large-v3-turbo",
   speechLang: "en-IN",

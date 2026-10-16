@@ -3,15 +3,16 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { BookA, HandCoins, Repeat, Target, Trash2 } from "lucide-react";
+import { BookA, HandCoins, Repeat, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSettings, updateSettings } from "@/lib/settings";
-import { addGroqKey, removeGroqKey, useApiKeys } from "@/lib/ai/keys";
+import { useAiStatus } from "@/lib/ai/status";
 import { signOut, useSession } from "@/lib/auth/session";
-import { getSupabase, resetSupabase } from "@/lib/supabase/client";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { syncNow, useSyncState } from "@/lib/sync/engine";
+import { DataSection } from "@/components/DataSection";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -35,16 +36,12 @@ export default function SettingsPage() {
   const s = useSettings();
   const session = useSession();
   const sync = useSyncState();
-  const keys = useApiKeys();
-  const [newKey, setNewKey] = useState("");
+  const ai = useAiStatus();
   const [email, setEmail] = useState("");
-  const [url, setUrl] = useState(s.supabaseUrl);
-  const [anon, setAnon] = useState(s.supabaseAnonKey);
-  const [now] = useState(() => Date.now());
 
   async function sendLink() {
     const sb = getSupabase();
-    if (!sb) return toast.error("Add your Supabase URL and anon key first");
+    if (!sb) return toast.error("Sync is not configured on this deployment");
     const { error } = await sb.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.origin } });
     if (error) toast.error(error.message);
     else toast.success("Magic link sent");
@@ -88,70 +85,26 @@ export default function SettingsPage() {
               </Button>
             </div>
           </>
-        ) : (
-          <>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="url">Supabase URL</Label>
-              <Input id="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://xxxx.supabase.co" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="anon">Anon key</Label>
-              <Input id="anon" value={anon} onChange={(e) => setAnon(e.target.value)} placeholder="eyJ…" />
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                updateSettings({ supabaseUrl: url.trim(), supabaseAnonKey: anon.trim() });
-                resetSupabase();
-                toast.success("Saved");
-              }}
-            >
-              Save project
+        ) : isSupabaseConfigured() ? (
+          <div className="flex gap-2">
+            <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Button onClick={sendLink} disabled={!email}>
+              Send link
             </Button>
-            <div className="flex gap-2">
-              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <Button onClick={sendLink} disabled={!email}>
-                Send link
-              </Button>
-            </div>
-          </>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Not configured. Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in the deployment to enable sync.
+          </p>
         )}
       </Section>
 
-      <Section title="AI keys (Groq)">
+      <Section title="AI (Groq)">
         <p className="text-xs text-muted-foreground">
-          Stored in your own Supabase project (synced to every device you sign in on). When one is rate-limited the next is used; when every key fails, the next model in the list is tried.
+          {ai.configured
+            ? `${ai.keys} server ${ai.keys === 1 ? "key" : "keys"} configured. When one is rate-limited the next is used; when every key fails, the next model in the list is tried.`
+            : "Not configured. Set GROQ_API_KEYS (comma-separated) in the deployment to enable AI parsing and Whisper."}
         </p>
-        <ul className="flex flex-col gap-2">
-          {keys.map((k) => {
-            const cooling = k.cooldown_until > now;
-            return (
-              <li key={k.id} className="flex items-center gap-2 text-sm">
-                <span className="flex-1">
-                  {k.label} <span className="font-mono text-xs text-muted-foreground">…{k.key.slice(-6)}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {k.invalid ? "invalid" : cooling ? "rate limited" : k.last_used ? "ok" : "unused"}
-                  </span>
-                </span>
-                <Button variant="ghost" size="icon-sm" aria-label="Remove key" onClick={() => removeGroqKey(k.id)}>
-                  <Trash2 />
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="flex gap-2">
-          <Input placeholder="gsk_…" value={newKey} onChange={(e) => setNewKey(e.target.value)} />
-          <Button
-            disabled={!newKey.trim()}
-            onClick={() => {
-              addGroqKey(newKey.trim());
-              setNewKey("");
-            }}
-          >
-            Add
-          </Button>
-        </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="models">Model chain (one per line, tried in order)</Label>
           <textarea
@@ -221,6 +174,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </Section>
+      <DataSection />
+
     </main>
   );
 }

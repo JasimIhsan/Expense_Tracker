@@ -5,7 +5,7 @@ import { db, newId, nowIso, type TxnSource } from "../db/schema";
 import { addTransactions } from "../db/repo";
 import { scheduleSync } from "../sync/engine";
 import { parseNote } from "./pipeline";
-import { hasAi } from "./keys";
+import { hasAi } from "./status";
 
 /** Notes that need the AI but could not be parsed yet (offline, rate-limited, no key). */
 export async function enqueue(text: string, source: TxnSource) {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { getSettings } from "../settings";
-import { hasAi } from "../ai/keys";
+import { hasAi } from "../ai/status";
 import { transcribe } from "../ai/groq";
 
 export type VoiceState = "idle" | "listening" | "processing" | "unsupported";

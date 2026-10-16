@@ -131,9 +131,18 @@ export function QuickAdd() {
   });
 
   // App shortcut "/?voice=1" opens with the mic armed; a tap is still needed for permission.
+  // "/?text=…" (share target) parses the shared text straight away.
+  const handledRef = useRef<string | null>(null);
   useEffect(() => {
     if (params.get("voice") === "1") inputRef.current?.focus();
-  }, [params]);
+    const shared = params.get("text");
+    if (shared && handledRef.current !== shared) {
+      handledRef.current = shared;
+      setText(shared);
+      void submit(shared, "share");
+      window.history.replaceState(null, "", "/");
+    }
+  }, [params, submit]);
 
   useEffect(() => clearTimer, []);
 

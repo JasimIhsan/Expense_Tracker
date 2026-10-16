@@ -1,24 +1,22 @@
 "use client";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getSettings } from "../settings";
+
+/** Supabase comes from the deployment's environment; no in-app configuration. */
+const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 let client: SupabaseClient | null = null;
-let clientUrl = "";
 
-/** Returns a Supabase client for the configured project, or null when not configured. */
+export const isSupabaseConfigured = () => Boolean(URL && ANON);
+
+/** Returns the Supabase client, or null when the deployment has no Supabase env. */
 export function getSupabase(): SupabaseClient | null {
-  const { supabaseUrl, supabaseAnonKey } = getSettings();
-  if (!supabaseUrl || !supabaseAnonKey) return null;
-  if (client && clientUrl === supabaseUrl) return client;
-  client = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
-  });
-  clientUrl = supabaseUrl;
+  if (!isSupabaseConfigured()) return null;
+  if (!client) {
+    client = createClient(URL, ANON, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+    });
+  }
   return client;
-}
-
-export function resetSupabase() {
-  client = null;
-  clientUrl = "";
 }

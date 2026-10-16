@@ -71,17 +71,6 @@ export interface RecurringRule extends SyncedRow {
   next_run: string;
 }
 
-/** AI provider keys. Synced per user so one setup covers every device. */
-export interface ApiKey extends SyncedRow {
-  provider: "groq";
-  label: string;
-  key: string;
-  /** Epoch ms until which the key is on cooldown after a 429. */
-  cooldown_until: number;
-  invalid: 0 | 1;
-  last_used: number | null;
-}
-
 export interface KV {
   key: string;
   value: unknown;
@@ -104,7 +93,6 @@ export class AppDB extends Dexie {
   debts!: EntityTable<Debt, "id">;
   aliases!: EntityTable<Alias, "id">;
   recurring_rules!: EntityTable<RecurringRule, "id">;
-  api_keys!: EntityTable<ApiKey, "id">;
   kv!: EntityTable<KV, "key">;
   ai_queue!: EntityTable<AiQueueItem, "id">;
 
@@ -121,9 +109,6 @@ export class AppDB extends Dexie {
       kv: "key",
       ai_queue: "id, created_at",
     });
-    this.version(2).stores({
-      api_keys: "id, provider, dirty, updated_at",
-    });
   }
 }
 
@@ -138,7 +123,6 @@ export const SYNC_TABLES = [
   "debts",
   "aliases",
   "recurring_rules",
-  "api_keys",
 ] as const;
 export type SyncTable = (typeof SYNC_TABLES)[number];
 

@@ -1,12 +1,14 @@
 import { createGroq } from "@ai-sdk/groq";
 import { APICallError, generateText, Output, transcribe as sdkTranscribe, type FlexibleSchema } from "ai";
 import { getSettings } from "../settings";
-import type { ApiKey } from "../db/schema";
-import { allKeys, availableKeys, patchGroqKey, startKeyStore } from "./keys";
+import { hasAi, loadAiStatus } from "./status";
 
-/** Groq through the Vercel AI SDK (`@ai-sdk/groq`), with our own key pool and model chain on top. */
+/**
+ * Groq through the Vercel AI SDK (`@ai-sdk/groq`). The browser never holds a
+ * key: every call goes to our /api/groq proxy, which injects a server key and
+ * rotates on rate limits. The client only falls back across models.
+ */
 export const GROQ_BASE = "https://api.groq.com/openai/v1";
-/** Same-origin pass-through used only when the browser cannot reach Groq directly. */
 export const PROXY_BASE = "/api/groq";
 
 export class AiError extends Error {
@@ -21,70 +23,35 @@ export class AiError extends Error {
 /** Injected for tests; the app uses global fetch. */
 export type FetchLike = typeof fetch;
 
-export function providerFor(key: string, opts: { fetchImpl?: FetchLike; baseURL?: string } = {}) {
-  return createGroq({ apiKey: key, baseURL: opts.baseURL ?? GROQ_BASE, fetch: opts.fetchImpl });
-}
-
-function cooldownMs(headers: Record<string, string> | undefined) {
-  const secs = Number(headers?.["retry-after"]);
-  return Number.isFinite(secs) && secs > 0 ? secs * 1000 : 60_000;
+export function providerFor(opts: { fetchImpl?: FetchLike; baseURL?: string } = {}) {
+  const base = opts.baseURL ?? (typeof window === "undefined" ? PROXY_BASE : `${window.location.origin}${PROXY_BASE}`);
+  // The proxy ignores this header and uses the server's keys; the SDK just needs a value.
+  return createGroq({ apiKey: "proxied", baseURL: base, fetch: opts.fetchImpl });
 }
 
 /**
- * Runs `attempt` across the key pool and the model chain:
- * for each model, every usable key is tried; 429/5xx put the key on cooldown,
- * 401/403 mark it invalid, and 400/404 (model not available) skip to the next model.
+ * Tries each model in the chain. 429/503 from the proxy means every server key
+ * is exhausted or none is configured, so stop; 400/404 means the model is
+ * unavailable, so move to the next one.
  */
-export async function withFailover<T>(
-  attempt: (key: ApiKey, model: string) => Promise<T>,
-  models: string[] = getSettings().models,
-): Promise<T> {
-  await startKeyStore();
-  if (allKeys().length === 0) throw new AiError("No Groq API key configured", "no-keys");
+export async function withModelFallback<T>(attempt: (model: string) => Promise<T>, models: string[] = getSettings().models): Promise<T> {
+  await loadAiStatus();
+  if (!hasAi()) throw new AiError("No Groq API key configured on the server", "no-keys");
   let lastError = "";
-  modelLoop: for (const model of models) {
-    const keys = availableKeys();
-    if (keys.length === 0) break;
-    for (const key of keys) {
-      try {
-        const out = await attempt(key, model);
-        patchGroqKey(key.id, { last_used: Date.now() });
-        return out;
-      } catch (e) {
-        patchGroqKey(key.id, { last_used: Date.now() });
-        if (!APICallError.isInstance(e) || e.statusCode === undefined) {
-          // Network/CORS/parse failure: another key will not help, but keep trying.
-          lastError = e instanceof Error ? e.message : String(e);
-          continue;
-        }
-        const status = e.statusCode;
-        lastError = `${status} ${(e.responseBody ?? e.message).slice(0, 200)}`;
-        if (status === 429 || status >= 500) {
-          patchGroqKey(key.id, { cooldown_until: Date.now() + cooldownMs(e.responseHeaders) });
-          continue;
-        }
-        if (status === 401 || status === 403) {
-          patchGroqKey(key.id, { invalid: 1 });
-          continue;
-        }
-        // 400/404/413: model or request problem → next model.
-        continue modelLoop;
+  for (const model of models) {
+    try {
+      return await attempt(model);
+    } catch (e) {
+      if (!APICallError.isInstance(e) || e.statusCode === undefined) {
+        throw new AiError(e instanceof Error ? e.message : String(e), "network");
       }
+      lastError = `${e.statusCode} ${(e.responseBody ?? e.message).slice(0, 200)}`;
+      if (e.statusCode === 429) throw new AiError(`All keys are rate-limited (${lastError})`, "all-failed");
+      if (e.statusCode === 503) throw new AiError("No Groq API key configured on the server", "no-keys");
+      // 400/404/413/5xx: try the next model.
     }
   }
-  if (availableKeys().length === 0) throw new AiError(`All keys are rate-limited or invalid (${lastError})`, "all-failed");
   throw new AiError(`AI request failed: ${lastError}`, "bad-response");
-}
-
-/** Call directly; if the browser blocks it (CORS/network), retry the same key through the proxy. */
-async function viaDirectThenProxy<T>(fn: (baseURL: string) => Promise<T>): Promise<T> {
-  try {
-    return await fn(GROQ_BASE);
-  } catch (e) {
-    const networkFailure = !APICallError.isInstance(e) || e.statusCode === undefined;
-    if (typeof window === "undefined" || !networkFailure) throw e;
-    return fn(PROXY_BASE);
-  }
 }
 
 export async function chatObject<T>(
@@ -93,41 +60,33 @@ export async function chatObject<T>(
   prompt: string,
   opts: { models?: string[]; fetchImpl?: FetchLike } = {},
 ): Promise<T> {
-  return withFailover<T>(
-    (key, model) =>
-      viaDirectThenProxy(async (baseURL) => {
-        const groq = providerFor(key.key, { fetchImpl: opts.fetchImpl, baseURL });
-        const { output } = await generateText({
-          model: groq(model),
-          system,
-          prompt,
-          output: Output.object({ schema }),
-          temperature: 0,
-          maxOutputTokens: 800,
-          maxRetries: 0, // the key pool is the retry policy
-          providerOptions: model.startsWith("openai/") ? { groq: { reasoningEffort: "low" } } : undefined,
-        });
-        return output;
-      }),
-    opts.models,
-  );
+  const groq = providerFor({ fetchImpl: opts.fetchImpl });
+  return withModelFallback<T>(async (model) => {
+    const { output } = await generateText({
+      model: groq(model),
+      system,
+      prompt,
+      output: Output.object({ schema }),
+      temperature: 0,
+      maxOutputTokens: 800,
+      maxRetries: 0, // the server key pool is the retry policy
+      providerOptions: model.startsWith("openai/") ? { groq: { reasoningEffort: "low" } } : undefined,
+    });
+    return output;
+  }, opts.models);
 }
 
 export async function transcribe(blob: Blob, opts: { language?: string; prompt?: string; fetchImpl?: FetchLike } = {}): Promise<string> {
   const { whisperModel } = getSettings();
   const audio = new Uint8Array(await blob.arrayBuffer());
-  return withFailover<string>(
-    (key) =>
-      viaDirectThenProxy(async (baseURL) => {
-        const groq = providerFor(key.key, { fetchImpl: opts.fetchImpl, baseURL });
-        const { text } = await sdkTranscribe({
-          model: groq.transcription(whisperModel),
-          audio,
-          maxRetries: 0,
-          providerOptions: { groq: { language: opts.language ?? null, prompt: opts.prompt ?? null, temperature: 0 } },
-        });
-        return text.trim();
-      }),
-    [whisperModel],
-  );
+  const groq = providerFor({ fetchImpl: opts.fetchImpl });
+  return withModelFallback<string>(async (model) => {
+    const { text } = await sdkTranscribe({
+      model: groq.transcription(model),
+      audio,
+      maxRetries: 0,
+      providerOptions: { groq: { language: opts.language ?? null, prompt: opts.prompt ?? null, temperature: 0 } },
+    });
+    return text.trim();
+  }, [whisperModel]);
 }

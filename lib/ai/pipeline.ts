@@ -4,7 +4,7 @@ import { db } from "../db/schema";
 import { quickParse } from "../parse/quick";
 import type { Draft, ParseContext } from "../parse/types";
 import { aiParse } from "./parse";
-import { hasAi } from "./keys";
+import { hasAi, loadAiStatus } from "./status";
 import { AiError } from "./groq";
 
 export async function loadParseContext(): Promise<ParseContext> {
@@ -38,10 +38,11 @@ export async function parseNote(text: string, source: Draft["source"], ctx?: Par
   if (quick.unparsed.length === 0) return { drafts: quick.drafts, leftover: null, usedAi: false, error: null };
 
   const rest = quick.unparsed.join(", ");
-  if (!hasAi()) return { drafts: quick.drafts, leftover: rest, usedAi: false, error: "no-keys" };
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     return { drafts: quick.drafts, leftover: rest, usedAi: false, error: "offline" };
   }
+  await loadAiStatus();
+  if (!hasAi()) return { drafts: quick.drafts, leftover: rest, usedAi: false, error: "no-keys" };
   try {
     const ai = await aiParse(rest, context, source);
     return { drafts: [...quick.drafts, ...ai], leftover: null, usedAi: true, error: null };

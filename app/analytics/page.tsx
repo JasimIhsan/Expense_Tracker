@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { FileText } from "lucide-react";
 import { addMonths, differenceInCalendarDays, eachDayOfInterval, endOfMonth, format, isSameMonth, startOfMonth, subMonths } from "date-fns";
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { MonthPicker } from "@/components/MonthPicker";
@@ -113,7 +115,12 @@ export default function AnalyticsPage() {
     <main className="flex flex-col gap-4 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Stats</h1>
-        <MonthPicker month={month} onChange={setMonth} />
+        <div className="flex items-center gap-1">
+          <Link href={`/report?month=${format(month, "yyyy-MM")}`} aria-label="Monthly report" className="flex size-8 items-center justify-center rounded-lg text-muted-foreground">
+            <FileText className="size-4" />
+          </Link>
+          <MonthPicker month={month} onChange={setMonth} />
+        </div>
       </header>
 
       <div className="grid grid-cols-2 gap-2">

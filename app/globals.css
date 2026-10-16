@@ -128,3 +128,7 @@
     @apply font-sans;
   }
 }
+@media print {
+  html, body { background: #fff !important; color: #000 !important; }
+  .print\:hidden { display: none !important; }
+}
