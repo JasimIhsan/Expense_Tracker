@@ -11,7 +11,8 @@ and a free [Supabase](https://supabase.com) project for sync across devices. Key
 - Next.js (App Router, TypeScript), Tailwind, shadcn/ui
 - PWA via Serwist (installable, offline app shell)
 - Dexie (IndexedDB) as the source of truth on the device; background sync to Supabase Postgres with RLS
-- Groq: `openai/gpt-oss-20b` with model and key failover; `whisper-large-v3-turbo` for voice where the browser's Web Speech API is weak
+- Groq via the Vercel AI SDK (`ai` + `@ai-sdk/groq`): `openai/gpt-oss-20b` with structured output, our own key rotation and model
+  fallback on top; `whisper-large-v3-turbo` for voice where the browser's Web Speech API is weak
 
 ## Run it yourself
 
