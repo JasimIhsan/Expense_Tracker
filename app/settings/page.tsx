@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import Link from "next/link";
+import { BookA, HandCoins, Repeat, Target, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 const selectCls = "h-10 rounded-lg border border-input bg-background px-3 text-sm";
+
+const MORE_LINKS = [
+  { href: "/budgets", label: "Budgets", Icon: Target },
+  { href: "/recurring", label: "Recurring", Icon: Repeat },
+  { href: "/debts", label: "Lend & borrow", Icon: HandCoins },
+  { href: "/aliases", label: "Vocabulary", Icon: BookA },
+] as const;
 
 export default function SettingsPage() {
   const s = useSettings();
@@ -43,7 +51,16 @@ export default function SettingsPage() {
 
   return (
     <main className="flex flex-col gap-4 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
-      <h1 className="text-xl font-semibold">Settings</h1>
+      <h1 className="text-xl font-semibold">More</h1>
+
+      <nav className="grid grid-cols-2 gap-2">
+        {MORE_LINKS.map(({ href, label, Icon }) => (
+          <Link key={href} href={href} className="flex items-center gap-2 rounded-xl border border-border bg-card p-3 text-sm font-medium active:bg-muted">
+            <Icon className="size-4 text-muted-foreground" />
+            {label}
+          </Link>
+        ))}
+      </nav>
 
       <Section title="Sync">
         {session ? (

@@ -10,6 +10,7 @@ import { seedDefaults } from "@/lib/db/seed";
 import { resetCursors, syncNow } from "@/lib/sync/engine";
 import { LOCAL_USER } from "@/lib/db/schema";
 import { drainQueue } from "@/lib/ai/queue";
+import { runDueRules } from "@/lib/recurring";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const settings = useSettings();
@@ -36,9 +37,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("unhandledrejection", onReject);
   }, []);
 
-  // Parse queued notes on reconnect / resume, independent of sign-in.
+  // On open / resume: create due recurring entries and parse queued notes.
   useEffect(() => {
-    const run = () => document.visibilityState === "visible" && drainQueue().catch(console.error);
+    const run = () => {
+      if (document.visibilityState !== "visible") return;
+      runDueRules().catch(console.error);
+      drainQueue().catch(console.error);
+    };
     run();
     window.addEventListener("online", run);
     document.addEventListener("visibilitychange", run);

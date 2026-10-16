@@ -2,6 +2,7 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { QuickAdd } from "@/components/QuickAdd";
+import { BudgetAlerts } from "@/components/BudgetAlerts";
 import Link from "next/link";
 import { startOfDay, startOfMonth, startOfWeek, addDays } from "date-fns";
 import { Cloud, CloudOff, RefreshCw } from "lucide-react";
@@ -59,6 +60,8 @@ export default function HomePage() {
       <Suspense>
         <QuickAdd />
       </Suspense>
+
+      <BudgetAlerts />
 
       <div className="grid grid-cols-3 gap-2">
         <Stat label="Today" {...today} />
