@@ -2,10 +2,10 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { addDays, addMonths, format, startOfDay, startOfMonth } from "date-fns";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { addDays, addMonths, startOfDay, startOfMonth } from "date-fns";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { MonthPicker } from "@/components/MonthPicker";
 import { TxnList } from "@/components/TxnList";
 import { useLookups, useTransactionsBetween, sumByType } from "@/hooks/useData";
 import { formatMoney, useSettings } from "@/lib/settings";
@@ -41,17 +41,7 @@ function TransactionsInner() {
     <main className="flex flex-col gap-3 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{todayOnly ? "Today" : "Transactions"}</h1>
-        {!todayOnly && (
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setMonth((m) => addMonths(m, -1))} aria-label="Previous month">
-              <ChevronLeft />
-            </Button>
-            <span className="min-w-20 text-center text-sm font-medium">{format(month, "MMM yyyy")}</span>
-            <Button variant="ghost" size="icon" onClick={() => setMonth((m) => addMonths(m, 1))} aria-label="Next month">
-              <ChevronRight />
-            </Button>
-          </div>
-        )}
+        {!todayOnly && <MonthPicker month={month} onChange={setMonth} />}
       </header>
       <div className="relative">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
